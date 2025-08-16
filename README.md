@@ -12,7 +12,7 @@ Students can register, view lessons, submit assignments.
 
 Unit tests included for APIs.
 
-📂 Tech Stack
+ Tech Stack
 
 Backend: Django, Django REST Framework
 
