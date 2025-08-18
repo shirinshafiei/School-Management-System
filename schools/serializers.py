@@ -108,14 +108,10 @@ class CreateSubmissionsSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         student_profile = getattr(request.user, 'student_profile', None)
 
-        is_enrolled = Enrollment.objects.filter(
-            student=student_profile,
-            course=exercise.course
-        ).exists()
-
-        if not is_enrolled:
+        if not exercise.course.students.filter(id=student_profile.id).exists():
             raise serializers.ValidationError(
                 "You are not enrolled in this course and cannot submit answers"
             )
 
         return exercise
+

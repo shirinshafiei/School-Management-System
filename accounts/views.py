@@ -46,14 +46,12 @@ class AddStudentToCourseView(APIView):
             student = serializer.validated_data['student']
             course = serializer.validated_data['course']
 
-            Enrollment.objects.create(
-                course=course,
-                student=student
-            )
+            course.students.add(student)
 
-            return Response({"detail": "student added successfully"})
+            return Response({"detail": "student added successfully"}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class TeacherProfileUpdateView(generics.UpdateAPIView):
     serializer_class = TeacherProfileUpdate
