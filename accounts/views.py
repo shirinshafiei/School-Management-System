@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from schools.models import Enrollment
-from .permissions import IsProfileOwner, IsSystemAdmin
+from .permissions import IsProfileOwner, IsSystemAdmin, IsTeacher, IsStudent
 from .serializers import TeacherSignUpSerializer, StudentSignUpSerializer, CustomTokenObtainPairSerializer, \
     TeacherProfileSetSerializer, AddStudentSerializer, TeacherProfileUpdate, StudentProfileUpdate, UserSerializer, \
     SchoolSerializer
@@ -14,6 +15,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+
 User = get_user_model()
 
 class TeacherSignUpView(CreateAPIView):
@@ -29,15 +31,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class TeacherProfileSetUpView(generics.RetrieveUpdateAPIView):
     serializer_class = TeacherProfileSetSerializer
-    permission_classes = [IsAuthenticated, IsProfileOwner]
+    permission_classes = [IsAuthenticated, IsProfileOwner, IsTeacher]
 
     def get_object(self):
-        if not hasattr(self.request.user, 'teacher_profile'):
-            raise PermissionDenied("Only teachers can access this view.")
         return self.request.user.teacher_profile
 
 class AddStudentToCourseView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def post(self, request):
         serializer = AddStudentSerializer(data=request.data, context={'request': request})
@@ -57,32 +57,25 @@ class AddStudentToCourseView(APIView):
 
 class TeacherProfileUpdateView(generics.UpdateAPIView):
     serializer_class = TeacherProfileUpdate
-    permission_classes = [IsAuthenticated, IsProfileOwner]
+    permission_classes = [IsAuthenticated, IsProfileOwner, IsTeacher]
 
     def get_object(self):
-        if not hasattr(self.request.user, 'teacher_profile'):
-            raise PermissionDenied("Only teachers can access this view.")
         return self.request.user.teacher_profile
-
 
 class StudentProfileUpdateView(generics.UpdateAPIView):
     serializer_class = StudentProfileUpdate
-    permission_classes = [IsAuthenticated, IsProfileOwner]
+    permission_classes = [IsAuthenticated, IsProfileOwner, IsStudent]
 
     def get_object(self):
-        if not hasattr(self.request.user, 'student_profile'):
-            raise PermissionDenied("Only students can access this view.")
         return self.request.user.student_profile
 
 class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsSystemAdmin]
 
-    def get_queryset(self):
-        role = self.request.query_params.get('role')
-        if role in ['teacher', 'student']:
-            return User.objects.filter(role=role)
-        return User.objects.all()
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['role']
 
 
 class UserApprovalView(APIView):
@@ -111,7 +104,7 @@ class SchoolCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSystemAdmin]
 
 class LogoutView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:

@@ -11,12 +11,6 @@ class CourseSerializer(serializers.ModelSerializer):
         fields = ("id", "subject", "name", "teacher", "school")
 
 
-class EnrollmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Enrollment
-        fields = ("id", "course", "student")
-
-
 class NewsSerializer(serializers.ModelSerializer):
     course = serializers.PrimaryKeyRelatedField(read_only=True)
     title = serializers.CharField(required=False)

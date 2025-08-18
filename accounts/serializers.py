@@ -41,23 +41,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         )
         return school
 
-
-class TeacherSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    class Meta:
-        model = Teacher
-        fields = ("id", "bio", "location")
-
-
-class StudentSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    class Meta:
-        model = Student
-        fields = ("id", "user", "school")
-
-
 class TeacherSignUpSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
         fields = ("username", "password", "first_name",
@@ -79,7 +63,6 @@ class TeacherSignUpSerializer(serializers.ModelSerializer):
 
 
 class StudentSignUpSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
         fields = ("username", "password",
@@ -207,8 +190,7 @@ class AddStudentSerializer(serializers.Serializer):
 
         request_user = self.context['request'].user
         if course.teacher.user != request_user:
-            raise serializers.ValidationError("you can not acceess this course")
-
+            raise serializers.ValidationError("you can not access this course")
 
         try:
             student_user = User.objects.get(national_id=national_id, role='student')
