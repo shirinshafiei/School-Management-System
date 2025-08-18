@@ -1,11 +1,7 @@
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework import generics, permissions, viewsets
-from rest_framework.authentication import TokenAuthentication
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, viewsets, filters
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
-
-from accounts.permissions import  IsSystemAdmin
+from accounts.permissions import IsSystemAdmin, IsStudent, IsTeacher
 from .models import News, Exercise, Course, Submissions
 from .serializers import CreateNewsSerializer, CreateExercisesSerializer, CourseSerializer, \
     ExerciseSerializer, NewsSerializer, CreateSubmissionsSerializer
@@ -18,13 +14,11 @@ class NewsCreateView(generics.CreateAPIView):
 
 class NewsUpdateView(generics.UpdateAPIView):
     serializer_class = NewsSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'teacher_profile'):
-            return News.objects.filter(course__teacher=user.teacher_profile)
-        return News.objects.none()
+        return News.objects.filter(course__teacher=user.teacher_profile)
 
 class ExerciseCreateView(generics.CreateAPIView):
     serializer_class = CreateExercisesSerializer
@@ -33,55 +27,57 @@ class ExerciseCreateView(generics.CreateAPIView):
 
 class ExerciseUpdateView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CreateExercisesSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'teacher_profile'):
-            return Exercise.objects.filter(course__teacher=user.teacher_profile)
-        return Exercise.objects.none()
+        return Exercise.objects.filter(course__teacher=user.teacher_profile)
+
 
 
 class StudentEnrolledCoursesView(generics.ListAPIView):
     serializer_class = CourseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsStudent]
 
     def get_queryset(self):
         user = self.request.user
-        student_profile = getattr(user, 'student_profile', None)
-        if student_profile:
-            return Course.objects.filter(
-                enrollment__student=student_profile
-            ).select_related('teacher').distinct()
-        return Course.objects.none()
+        return Course.objects.filter(
+            student=user.student_profile
+        ).select_related('teacher').distinct()
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['course', 'title']
+    search_fields = ['title', 'body']
 
 
 class StudentExerciseView(generics.ListAPIView):
     serializer_class = ExerciseSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['course', 'title']
+    search_fields = ['title', 'body']
 
     def get_queryset(self):
         user = self.request.user
-        student_profile = getattr(user, 'student_profile', None)
-        if student_profile:
-            return Exercise.objects.filter(
-                course__enrollment__student=student_profile
-            ).select_related('course').distinct()
-        return Exercise.objects.none()
+        return Exercise.objects.filter(
+            course__students=user.student_profile
+        ).select_related('course').distinct()
 
 
 class StudentNewsView(generics.ListAPIView):
     serializer_class = NewsSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def get_queryset(self):
         user = self.request.user
-        student_profile = getattr(user, 'student_profile', None)
-        if student_profile:
-            return News.objects.filter(
-                course__enrollment__student=student_profile
-            ).select_related('course').distinct()
-        return News.objects.none()
+        return News.objects.filter(
+            course__student=user.student_profile
+        ).select_related('course').distinct()
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['course', 'title']
+    search_fields = ['title', 'body']
+
 
 class SubmissionCreateView(generics.CreateAPIView):
     serializer_class = CreateSubmissionsSerializer
@@ -89,28 +85,20 @@ class SubmissionCreateView(generics.CreateAPIView):
 
 class SubmissionUpdateView(generics.UpdateAPIView):
     serializer_class = CreateSubmissionsSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'student_profile'):
-            return Submissions.objects.filter(student=user.student_profile)
-        return Submissions.objects.none()
+        return Submissions.objects.filter(student=user.student_profile)
 
-class NewsAdminViewSet(viewsets.ModelViewSet):
-    queryset = News.objects.all()
-    serializer_class = NewsSerializer
-    permission_classes = [IsAuthenticated, IsSystemAdmin]
-
-class ExerciseAdminViewSet(viewsets.ModelViewSet):
-    queryset = Exercise.objects.all()
-    serializer_class = ExerciseSerializer
-    permission_classes = [IsAuthenticated, IsSystemAdmin]
-
-class CourseListCreateAPIView(generics.ListCreateAPIView):
+class CourseListAPIView(generics.ListAPIView):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated, IsSystemAdmin]
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['subject', 'teacher', 'school']
+    search_fields = ['name', 'subject']
 
 class CourseRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Course.objects.all()
@@ -121,3 +109,30 @@ class CourseCreateView(generics.CreateAPIView):
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated, IsSystemAdmin]
 
+class ExerciseListAPIView(generics.ListAPIView):
+    queryset = Exercise.objects.all()
+    serializer_class = ExerciseSerializer
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['course', 'title']
+    search_fields = ['title', 'body']
+
+class ExerciseRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Exercise.objects.all()
+    serializer_class = ExerciseSerializer
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
+
+class NewsListAPIView(generics.ListAPIView):
+    queryset = News.objects.all()
+    serializer_class = NewsSerializer
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['course', 'title']
+    search_fields = ['title', 'body']
+
+class NewsRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = News.objects.all()
+    serializer_class = NewsSerializer
+    permission_classes = [IsAuthenticated, IsSystemAdmin]

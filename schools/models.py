@@ -6,6 +6,7 @@ class Course(models.Model):
     name = models.CharField(max_length=20)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     school = models.ForeignKey(School, on_delete=models.CASCADE)
+    students = models.ManyToManyField(Student)
 
 class Enrollment(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)

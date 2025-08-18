@@ -3,13 +3,14 @@ from django.urls import path
 
 from config import settings
 from .views import NewsCreateView, NewsUpdateView, ExerciseCreateView, ExerciseUpdateView, StudentEnrolledCoursesView, \
-    StudentExerciseView, SubmissionCreateView, SubmissionUpdateView, NewsAdminViewSet, \
-    ExerciseAdminViewSet, StudentNewsView, CourseCreateView, CourseListCreateAPIView, CourseRetrieveUpdateDestroyAPIView
+    StudentExerciseView, SubmissionCreateView, SubmissionUpdateView,\
+     StudentNewsView, CourseCreateView, CourseListAPIView, CourseRetrieveUpdateDestroyAPIView, \
+    ExerciseListAPIView, ExerciseRetrieveUpdateDestroyAPIView, NewsListAPIView, NewsRetrieveUpdateDestroyAPIView
 from rest_framework.routers import DefaultRouter
 
-router = DefaultRouter()
-router.register(r'admin/news', NewsAdminViewSet, basename='admin-news')
-router.register(r'admin/exercises', ExerciseAdminViewSet, basename='admin-exercises')
+# router = DefaultRouter()
+# router.register(r'admin/news', NewsAdminViewSet, basename='admin-news')
+# router.register(r'admin/exercises', ExerciseAdminViewSet, basename='admin-exercises')
 # router.register(r'admin/courses', CourseAdminViewSet, basename='admin-courses')
 
 urlpatterns = [
@@ -27,8 +28,13 @@ urlpatterns = [
     path('student/update-submission/<int:pk>/', SubmissionUpdateView.as_view(), name='submission-update'),
 
     path('create-course/', CourseCreateView.as_view(), name='course-create'),
-    path('courses/', CourseListCreateAPIView.as_view(), name='course-list-create'),
+    path('courses/', CourseListAPIView.as_view(), name='course-list'),
     path('courses/<int:pk>/', CourseRetrieveUpdateDestroyAPIView.as_view(), name='course-detail'),
 
+    path('exercises/', ExerciseListAPIView.as_view(), name='exercise-list'),
+    path('exercise/<int:pk>/', ExerciseRetrieveUpdateDestroyAPIView.as_view(), name='exercise-detail'),
+
+    path('news/', NewsListAPIView.as_view(), name='news-list'),
+    path('news/<int:pk>/', NewsRetrieveUpdateDestroyAPIView.as_view(), name='news-detail'),
+
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-urlpatterns += router.urls
