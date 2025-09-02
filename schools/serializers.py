@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.utils import timezone
 
 from .models import (
-    Course, Enrollment, Exercise, News, Submissions
+    Course, Exercise, News, Submissions
 )
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -43,75 +43,29 @@ class SubmissionSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("created_at",)
 
-class CreateNewsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = News
-        fields = ['id', 'course', 'title', 'body', 'created_at', 'last_updated']
-        read_only_fields = ['id', 'created_at', 'last_updated']
-
-    def validate_course(self, value):
-        user = self.context['request'].user
-        if value.teacher != user.teacher_profile:
-            raise serializers.ValidationError("You are not allowed to manage news for this course")
-        return value
-
-class CreateExercisesSerializer(serializers.ModelSerializer):
-    attached = serializers.FileField(
-        required=False,
-        allow_null=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=['pdf', 'zip', 'txt'])
-        ],
-    )
-
-    class Meta:
-        model = Exercise
-        fields = ['id', 'course', 'title', 'body', 'created_at', 'last_updated', 'deadline', 'attached']
-        read_only_fields = ['id', 'created_at', 'last_updated']
-
-    def validate_course(self, value):
-        user = self.context['request'].user
-        if value.teacher != user.teacher_profile:
-            raise serializers.ValidationError("You are not allowed to manage news for this course")
-        return value
 
 class CreateSubmissionsSerializer(serializers.ModelSerializer):
     answer = serializers.FileField(
         required=False,
         allow_null=True,
-        validators=[
-            FileExtensionValidator(allowed_extensions=['pdf', 'zip', 'txt'])
-        ],
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'zip', 'txt'])]
     )
 
     class Meta:
         model = Submissions
-        fields = ['id', 'exercise', 'student', 'created_at', 'answer']
-        read_only_fields = ['id', 'created_at', 'student']
+        fields = ["id", "exercise", "student", "created_at", "answer"]
+        read_only_fields = ["id", "created_at", "student"]
 
     def validate(self, data):
+        request = self.context.get("request")
 
-        request = self.context.get('request')
-        exercise = data.get('exercise')
-        student_profile = getattr(request.user, 'student_profile', None)
+        data["student"] = request.user
 
-        data['student'] = student_profile
-
-        if exercise.deadline and exercise.deadline < timezone.now():
+        exercise = data.get("exercise")
+        if exercise and exercise.deadline and exercise.deadline < timezone.now():
             raise serializers.ValidationError(
                 {"exercise": "The submission deadline has passed"}
             )
 
         return data
-
-    def validate_exercise(self, exercise):
-        request = self.context.get('request')
-        student_profile = getattr(request.user, 'student_profile', None)
-
-        if not exercise.course.students.filter(id=student_profile.id).exists():
-            raise serializers.ValidationError(
-                "You are not enrolled in this course and cannot submit answers"
-            )
-
-        return exercise
 

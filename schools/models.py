@@ -1,16 +1,22 @@
+from django.contrib.auth import get_user_model
 from django.db import models
-from accounts.models import School, Teacher, Student
+from accounts.models import School
+User = get_user_model()
+
 
 class Course(models.Model):
     subject = models.CharField(max_length=20)
     name = models.CharField(max_length=20)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     school = models.ForeignKey(School, on_delete=models.CASCADE)
-    students = models.ManyToManyField(Student)
-
-class Enrollment(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="taught_courses"
+    )
+    students = models.ManyToManyField(
+        User,
+        related_name="enrolled_courses"
+    )
 
 class Exercise(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
@@ -30,6 +36,6 @@ class News(models.Model):
 
 class Submissions(models.Model):
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     answer = models.FileField()
