@@ -40,9 +40,12 @@ class IsEnrolledStudent(permissions.BasePermission):
 
             try:
                 exercise = Exercise.objects.get(id=exercise_id)
-                return request.user in exercise.course.students.all()
+
+                return request.user.has_perm('submit_to_exercise', exercise)
+
             except Exercise.DoesNotExist:
                 return False
+
         return True
 
     def has_object_permission(self, request, view, obj):
@@ -52,4 +55,4 @@ class IsEnrolledStudent(permissions.BasePermission):
         if obj.student != request.user:
             return False
 
-        return request.user in obj.exercise.course.students.all()
+        return request.user.has_perm('submit_to_exercise', obj.exercise)
