@@ -2,8 +2,8 @@ from django.test import TestCase
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from rest_framework import status
-from schools.models import Enrollment, Course
-from accounts.models import Teacher, Student, School
+from schools.models import  Course
+from accounts.models import  School
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

@@ -1,15 +1,14 @@
 from django.contrib.auth import get_user_model
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from schools.models import Enrollment
-from .permissions import IsProfileOwner, IsSystemAdmin, IsTeacher, IsStudent
+from schools.models import  Course
+from .filters import IsCourseTeacherFilterBackend
+from .permissions import IsProfileOwner, IsSystemAdmin
 from .serializers import TeacherSignUpSerializer, StudentSignUpSerializer, CustomTokenObtainPairSerializer, \
-    TeacherProfileSetSerializer, AddStudentSerializer, TeacherProfileUpdate, StudentProfileUpdate, UserSerializer, \
-    SchoolSerializer
-from .models import Teacher, Student, School
+     AddStudentSerializer, UserSerializer, \
+    SchoolSerializer, UserProfileUpdateSerializer
+from .models import School
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -29,52 +28,34 @@ class StudentSignUpView(CreateAPIView):
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
-class TeacherProfileSetUpView(generics.RetrieveUpdateAPIView):
-    serializer_class = TeacherProfileSetSerializer
-    permission_classes = [IsAuthenticated, IsProfileOwner, IsTeacher]
+class AddStudentToCourseView(generics.GenericAPIView):
+    serializer_class = AddStudentSerializer
+    queryset = Course.objects.all()
+    filter_backends = [IsCourseTeacherFilterBackend]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        student = serializer.validated_data['student']
+        course = serializer.validated_data['course']
+
+        course.students.add(student)
+
+        return Response({"detail": "student added successfully"}, status=status.HTTP_200_OK)
+
+class ProfileUpdateView(generics.UpdateAPIView):
+    serializer_class = UserProfileUpdateSerializer
+    permission_classes = [IsAuthenticated, IsProfileOwner]
 
     def get_object(self):
-        return self.request.user.teacher_profile
-
-class AddStudentToCourseView(APIView):
-    permission_classes = [IsAuthenticated, IsTeacher]
-
-    def post(self, request):
-        serializer = AddStudentSerializer(data=request.data, context={'request': request})
-
-        if serializer.is_valid():
-            student = serializer.validated_data['student']
-            course = serializer.validated_data['course']
-
-            course.students.add(student)
-
-            return Response({"detail": "student added successfully"}, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class TeacherProfileUpdateView(generics.UpdateAPIView):
-    serializer_class = TeacherProfileUpdate
-    permission_classes = [IsAuthenticated, IsProfileOwner, IsTeacher]
-
-    def get_object(self):
-        return self.request.user.teacher_profile
-
-class StudentProfileUpdateView(generics.UpdateAPIView):
-    serializer_class = StudentProfileUpdate
-    permission_classes = [IsAuthenticated, IsProfileOwner, IsStudent]
-
-    def get_object(self):
-        return self.request.user.student_profile
+        return self.request.user
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsSystemAdmin]
-
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['role']
-
 
 class UserApprovalView(APIView):
     permission_classes = [IsAuthenticated, IsSystemAdmin]

@@ -10,12 +10,4 @@ class IsProfileOwner(permissions.BasePermission):
 
 class IsSystemAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'system_admin'
-
-class IsTeacher(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.role == 'teacher'
-
-class IsStudent(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.role == 'student'
+        return request.user.is_system_admin()
