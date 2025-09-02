@@ -14,6 +14,7 @@ class Course(models.Model):
             ("change_course", "Can change course"),
             ("delete_course", "Can delete course"),
             ("view_course", "Can view course"),
+            ("submit_to_course", "Can submit to course exercises"),
         ]
 
     teacher = models.ForeignKey(
@@ -34,6 +35,10 @@ class Exercise(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
     deadline = models.DateTimeField(null=True)
     attached = models.FileField()
+    class Meta:
+        permissions = [
+            ("submit_to_exercise", "Can submit to this exercise"),  # ADD THIS
+        ]
 
 class News(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='news')

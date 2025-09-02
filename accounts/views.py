@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from guardian.shortcuts import assign_perm
 from rest_framework import generics
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -40,6 +41,12 @@ class AddStudentToCourseView(generics.GenericAPIView):
 
         student = serializer.validated_data['student']
         course = serializer.validated_data['course']
+
+        assign_perm('submit_to_course', student, course)
+        assign_perm('view_course', student, course)
+
+        for exercise in course.exercises.all():
+            assign_perm('submit_to_exercise', student, exercise)
 
         course.students.add(student)
 
