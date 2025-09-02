@@ -6,19 +6,28 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import (
-    School, Teacher, Student,
+    School
 )
-from schools.models import Course, Enrollment
+from schools.models import Course
 User = get_user_model()
 
+from rest_framework import serializers
+from rest_framework.generics import CreateAPIView
+from rest_framework.permissions import AllowAny
+from django.contrib.auth.models import Group
+from .models import CustomUser as User, School
+
+
 class UserSerializer(serializers.ModelSerializer):
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
-            "id", "username", "email",
-            "first_name", "last_name",
-            "national_id", "role", "is_active"
+            "id", "username", "first_name",
+            "last_name", "national_id", "is_active"
         )
+
 
 class SchoolSerializer(serializers.ModelSerializer):
     location = serializers.ListField(
@@ -41,24 +50,25 @@ class SchoolSerializer(serializers.ModelSerializer):
         )
         return school
 
+
 class TeacherSignUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("username", "password", "first_name",
                   "last_name", "email", "national_id")
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data["username"],
             password=validated_data["password"],
-            email=validated_data["email"],
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
             national_id=validated_data["national_id"],
-            is_active=False,
-            role="teacher"
+            is_active=False
         )
-        Teacher.objects.create(user=user)
+        teacher_group = Group.objects.get(name='teacher')
+        user.groups.add(teacher_group)
         return user
 
 
@@ -67,6 +77,7 @@ class StudentSignUpSerializer(serializers.ModelSerializer):
         model = User
         fields = ("username", "password",
                   "first_name", "last_name", "national_id")
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -75,10 +86,10 @@ class StudentSignUpSerializer(serializers.ModelSerializer):
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
             national_id=validated_data["national_id"],
-            is_active=False,
-            role="student"
+            is_active=False
         )
-        Student.objects.create(user=user)
+        student_group = Group.objects.get(name='student')
+        user.groups.add(student_group)
         return user
 
 
@@ -87,68 +98,35 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
-        token['role'] = user.role
-
         return token
 
-class TeacherProfileSetSerializer(serializers.ModelSerializer):
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
     location = serializers.ListField(
         child=serializers.FloatField(),
         write_only=True,
         required=False,
-        help_text="Latitude and Longitude as a list [lat, lng]"
-    )
-
-    class Meta:
-        model = Teacher
-        fields = ['bio', 'location']
-
-    def update(self, instance, validated_data):
-        bio = validated_data.get('bio')
-        if bio is not None:
-            instance.bio = bio
-
-        location = validated_data.get('location')
-        if location and len(location) == 2:
-            instance.latitude = location[0]
-            instance.longitude = location[1]
-
-        instance.save()
-        return instance
-
-class UserUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username', 'first_name', 'last_name']
-        extra_kwargs = {
-            'username': {'required': False},
-            'first_name': {'required': False},
-            'last_name': {'required': False}
-        }
-
-class TeacherProfileUpdate(serializers.ModelSerializer):
-    user = UserUpdateSerializer()
-    location = serializers.ListField(
-        child=serializers.FloatField(),
-        write_only=True,
-        required=False,
+        help_text="Latitude and Longitude as a list [lat, lng]",
         min_length=2,
         max_length=2
     )
 
     class Meta:
-        model = Teacher
-        fields = ['user', 'bio', 'location']
+        model = User
+        fields = [
+            'username', 'first_name', 'last_name',
+             'bio', 'location'
+        ]
+        extra_kwargs = {
+            'username': {'required': False},
+        }
 
     def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', {})
-        user_serializer = UserUpdateSerializer(instance.user, data=user_data, partial=True)
-        if user_serializer.is_valid(raise_exception=True):
-            user_serializer.save()
-
         location = validated_data.pop('location', None)
+
         if location:
-            instance.latitude, instance.longitude = location
+            instance.latitude = location[0]
+            instance.longitude = location[1]
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -156,53 +134,31 @@ class TeacherProfileUpdate(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class StudentProfileUpdate(serializers.ModelSerializer):
-    user = UserUpdateSerializer()
-
-    class Meta:
-        model = Student
-        fields = ['user']
-
-    def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', {})
-        user_serializer = UserUpdateSerializer(instance.user, data=user_data, partial=True)
-        if user_serializer.is_valid(raise_exception=True):
-            user_serializer.save()
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-        return instance
 
 class AddStudentSerializer(serializers.Serializer):
     national_id = serializers.CharField(max_length=10)
     course_id = serializers.IntegerField()
 
-    def validate(self, data):
-        national_id = data.get('national_id')
-        course_id = data.get('course_id')
-
+    def validate_course_id(self, value):
         try:
-            course = Course.objects.get(id=course_id)
+            return Course.objects.get(id=value)
         except Course.DoesNotExist:
-            raise serializers.ValidationError("Course does not Exist")
+            raise serializers.ValidationError("Course does not exist")
 
-        request_user = self.context['request'].user
-        if course.teacher.user != request_user:
-            raise serializers.ValidationError("you can not access this course")
-
+    def validate_national_id(self, value):
         try:
-            student_user = User.objects.get(national_id=national_id, role='student')
+            return User.objects.get(national_id=value)
         except User.DoesNotExist:
-            raise serializers.ValidationError("student does not Exist")
+            raise serializers.ValidationError("User with this national ID does not exist")
 
-        try:
-            course = Course.objects.get(id=course_id)
-        except Course.DoesNotExist:
-            raise serializers.ValidationError("Course does not Exist")
+    def validate(self, data):
+        course = data['course_id']
+        student_user = data['national_id']
 
-        data['student'] = student_user.student_profile
+        student_group, _ = Group.objects.get_or_create(name="student")
+        if not student_user.groups.filter(name="student").exists():
+            student_user.groups.add(student_group)
+
         data['course'] = course
+        data['student'] = student_user
         return data
-
