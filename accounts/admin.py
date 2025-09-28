@@ -1,7 +1,10 @@
-from django.contrib import admin
-from .models import CustomUser  ,School
+from django.contrib.gis import admin
+from .models import School, CustomUser
 
-admin.site.register(CustomUser)
-# admin.site.register(Teacher)
-# admin.site.register(Student)
-admin.site.register(School)
+@admin.register(School)
+class SchoolAdmin(admin.OSMGeoAdmin):
+    list_display = ("name", "location")
+
+@admin.register(CustomUser)
+class SchoolAdmin(admin.OSMGeoAdmin):
+    list_display = ("username", "location")

@@ -11,9 +11,6 @@ class Course(models.Model):
 
     class Meta:
         permissions = [
-            ("change_course", "Can change course"),
-            ("delete_course", "Can delete course"),
-            ("view_course", "Can view course"),
             ("submit_to_course", "Can submit to course exercises"),
         ]
 

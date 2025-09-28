@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
+from django.contrib.gis.measure import Distance
 from guardian.shortcuts import assign_perm
 from rest_framework import generics
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from schools.models import  Course
-from .filters import IsCourseTeacherFilterBackend
+from .filters import IsCourseTeacherFilterBackend, NearbySchoolsFilterBackend
 from .permissions import IsProfileOwner, IsSystemAdmin
 from .serializers import TeacherSignUpSerializer, StudentSignUpSerializer, CustomTokenObtainPairSerializer, \
      AddStudentSerializer, UserSerializer, \
@@ -102,3 +103,20 @@ class LogoutView(APIView):
             return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
         except TokenError:
             return Response({"error": "Token is invalid or expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+class NearestSchoolsListAPIView(ListAPIView):
+    serializer_class = SchoolSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = School.objects.all()
+    filter_backends = [NearbySchoolsFilterBackend]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+
+        data_with_distance = []
+        for school_data, school_obj in zip(serializer.data, queryset):
+            school_data['distance_meters'] = round(school_obj.distance.m)
+            data_with_distance.append(school_data)
+
+        return Response(data_with_distance)

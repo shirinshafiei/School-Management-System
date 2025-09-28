@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .views import TeacherSignUpView, StudentSignUpView, CustomTokenObtainPairView, \
     AddStudentToCourseView, SchoolCreateView, \
-    UserListView, UserApprovalView, LogoutView, ProfileUpdateView
+    UserListView, UserApprovalView, LogoutView, ProfileUpdateView, NearestSchoolsListAPIView
 
 urlpatterns = [
     path("signup/teacher/", TeacherSignUpView.as_view(), name="teacher-signup"),
@@ -18,5 +18,6 @@ urlpatterns = [
     path("schools/create/", SchoolCreateView.as_view(), name="school-create"),
     path("users/", UserListView.as_view(), name="user-list"),
     path("users/<int:user_id>/approval/", UserApprovalView.as_view(), name="user-approval"),
+    path('nearest-schools/', NearestSchoolsListAPIView.as_view(), name='nearest-schools'),
 ]
 

@@ -1,19 +1,10 @@
-from contextlib import nullcontext
-
 from django.contrib.auth import get_user_model
-from rest_framework import serializers, status
-from rest_framework.response import Response
+from django.contrib.gis.geos import Point
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
-from .models import (
-    School
-)
 from schools.models import Course
 User = get_user_model()
 
 from rest_framework import serializers
-from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import Group
 from .models import CustomUser as User, School
 
@@ -33,8 +24,6 @@ class SchoolSerializer(serializers.ModelSerializer):
     location = serializers.ListField(
         child=serializers.FloatField(),
         write_only=True,
-        required=True,
-        help_text="Latitude and Longitude as a list [lat, lng]"
     )
 
     class Meta:
@@ -42,14 +31,9 @@ class SchoolSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "location")
 
     def create(self, validated_data):
-        location = validated_data.pop('location')
-        school = School.objects.create(
-            name=validated_data['name'],
-            latitude=location[0],
-            longitude=location[1]
-        )
-        return school
-
+        lat, lng = validated_data.pop("location")
+        validated_data["location"] = Point(lng, lat, srid=4326)
+        return super().create(validated_data)
 
 class TeacherSignUpSerializer(serializers.ModelSerializer):
     class Meta:
@@ -106,33 +90,18 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         child=serializers.FloatField(),
         write_only=True,
         required=False,
-        help_text="Latitude and Longitude as a list [lat, lng]",
-        min_length=2,
-        max_length=2
     )
 
     class Meta:
         model = User
-        fields = [
-            'username', 'first_name', 'last_name',
-             'bio', 'location'
-        ]
-        extra_kwargs = {
-            'username': {'required': False},
-        }
+        fields = ["username", "first_name", "last_name", "bio", "location"]
 
     def update(self, instance, validated_data):
-        location = validated_data.pop('location', None)
-
+        location = validated_data.pop("location", None)
         if location:
-            instance.latitude = location[0]
-            instance.longitude = location[1]
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-        return instance
+            lat, lng = location
+            instance.location = Point(lng, lat, srid=4326)
+        return super().update(instance, validated_data)
 
 
 class AddStudentSerializer(serializers.Serializer):
