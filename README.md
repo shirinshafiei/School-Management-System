@@ -2,7 +2,6 @@
 
 This project is a **Django REST API** backend for managing schools, teachers, and students.  
 It includes features like news, assignments, chat, and optional GIS-based location services.  
-There is **no frontend** — it’s purely API-based.
 
 ---
 
@@ -65,7 +64,8 @@ There is **no frontend** — it’s purely API-based.
    docker-compose exec web python manage.py createsuperuser
 
 ### Build & run
-docker-compose up --build
+   ```bash
+   docker-compose up --build
 
 
 ### Clone the repo
