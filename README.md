@@ -1,21 +1,73 @@
-School API Project (Django)
+#  School API
 
-This project is a school management API built with Django & Django REST Framework, using PostgreSQL.
+This project is a **Django REST API** backend for managing schools, teachers, and students.  
+It includes features like news, assignments, chat, and optional GIS-based location services.  
+There is **no frontend** — it’s purely API-based.
 
-Features
+---
 
-Admin can manage schools, teachers, students, lessons, news, and assignments.
+##  Features
+###  Admin
+- Create new schools with name + geographic coordinates  
+- Approve/reject teacher & student registrations  
+- Manage all lessons, classes, news, and assignments  
+- Assign teachers to classes  
 
-Teachers can register, create news, assignments, add students.
+###  Teacher
+- Register & login with username, password, and national ID  
+- Update profile (bio + location)  
+- Add students using national ID  
+- Create/manage **news** and **assignments** (text, deadline, PDF/ZIP upload)  
+- Chat with students (send/receive messages)  
+- View nearby schools (GIS)  
 
-Students can register, view lessons, submit assignments.
+### Student
+- Register & login with username, password, and national ID  
+- View assigned classes, related news, and assignments  
+- Submit assignment answers (text, PDF/ZIP)  
+- Edit answers before deadline  
+- Chat with teachers  
+- View nearby schools (GIS)  
 
-Unit tests included for APIs.
+---
 
- Tech Stack
+## 🚀 Deployment Guide  
 
-Backend: Django, Django REST Framework
+1. **Install dependencies**  
+   Make sure you have the following installed on your system:  
+   - [Docker](https://docs.docker.com/get-docker/)  
+   - [Docker Compose](https://docs.docker.com/compose/install/)  
 
-Database: PostgreSQL
+2. **Configure environment**  
+   - Open the file `settings.template`  
+   - Replace the placeholders with your actual values:  
+     - `SECRET_KEY`  
+     - `DB_NAME`  
+     - `DB_USER`  
+     - `DB_PASSWORD`  
+     - `DB_HOST`  
+   - Save it as:  
+     ```
+     settings.py
+     ```  
 
-Authentication: JWT / DRF Token
+   - Do the same for `docker-compose.yml.template`:  
+     - Replace placeholders with your values  
+     - Save it as:  
+       ```
+       docker-compose.yml
+       ```
+
+3. **Initialize your database**  
+   Run the migrations inside the container to set up schema:  
+   ```bash
+   docker-compose exec web python manage.py migrate
+   docker-compose exec web python manage.py createsuperuser
+
+### Build & run
+docker-compose up --build
+
+
+### Clone the repo
+```bash
+git clone https://github.com/your-username/School-Management-System.git
