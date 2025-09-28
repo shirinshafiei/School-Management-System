@@ -66,8 +66,3 @@ It includes features like news, assignments, chat, and optional GIS-based locati
 ### Build & run
    ```bash
    docker-compose up --build
-
-
-### Clone the repo
-```bash
-git clone https://github.com/your-username/School-Management-System.git
